@@ -6,125 +6,101 @@ import json
 import tkinter as tk
 from tkinter import messagebox
 
-# Configuración
-GITHUB_ZIP_URL = "https://mega.nz/fm/xsNT2T4R"
-MODS_LIST_URL = "https://github.com/JerikkoX/Minecraft-mods-012025/blob/main/mods_list.json"
-SCRIPT_URL = "https://raw.githubusercontent.com/JerikkoX/Minecraft-mods-012025/main/instalar_mods.py"
+# URLs de descarga desde MEGA
+MEGA_ZIP_GENERAL = "https://mega.nz/file/48dxgRAI#YmXBSS1IbG9qYednxHypoWfQkDmJMjAxZvb13Y1Tjfg"
+MEGA_ZIP_MODS = "https://mega.nz/fm/aquilinkenlace"
+MODS_JSON_URL = "https://raw.githubusercontent.com/JerikkoX/Minecraft-mods-012025/main/mods_list.json"
 
-MINECRAFT_PATH = os.path.expanduser("~") + "/AppData/Roaming/.minecraft/version2/"
-MODS_PATH = MINECRAFT_PATH + "mods/"
+# Rutas de instalación
+MINECRAFT_PATH = os.path.expanduser("~") + "/AppData/Roaming/.minecraft/"
+MODS_PATH = os.path.expanduser("~") + "/AppData/Roaming/.minecraft/installations/Minecraft 1.20.1 con mods 2025/mods/"
 TEMP_PATH = "mods_temp/"
 
-def descargar_mods():
-    """ Descarga el ZIP de los mods desde GitHub """
-    print("Descargando mods desde GitHub...")
-    response = requests.get(GITHUB_ZIP_URL, stream=True)
-    
+# Función para descargar archivos
+
+def descargar_archivo(url, destino):
+    print(f"Descargando {url}...")
+    response = requests.get(url, stream=True)
     if response.status_code == 200:
-        with open("mods.zip", "wb") as file:
-            file.write(response.content)
-        print("Descarga completa.")
+        with open(destino, "wb") as file:
+            for chunk in response.iter_content(1024):
+                file.write(chunk)
+        print("Descarga completada.")
+        return True
     else:
-        print("Error al descargar los mods.")
+        print("Error en la descarga.")
         return False
-    return True
 
-def extraer_mods():
-    """ Extrae los mods descargados """
-    if os.path.exists(TEMP_PATH):
-        shutil.rmtree(TEMP_PATH)
+# Función para extraer un ZIP
 
-    with zipfile.ZipFile("mods.zip", "r") as zip_ref:
-        zip_ref.extractall(TEMP_PATH)
-    
-    repo_name = os.listdir(TEMP_PATH)[0]  # Nombre del repo extraído
-    extracted_mods_path = os.path.join(TEMP_PATH, repo_name, "mods")
+def extraer_zip(archivo_zip, destino):
+    print(f"Extrayendo {archivo_zip} en {destino}...")
+    with zipfile.ZipFile(archivo_zip, "r") as zip_ref:
+        zip_ref.extractall(destino)
+    print("Extracción completada.")
 
-    if not os.path.exists(extracted_mods_path):
-        print("No se encontró la carpeta de mods en el repositorio.")
-        return False
-    
-    return extracted_mods_path
+# Instalación de archivos generales
+
+def instalar_archivos_generales():
+    destino_zip = "general.zip"
+    if descargar_archivo(MEGA_ZIP_GENERAL, destino_zip):
+        extraer_zip(destino_zip, MINECRAFT_PATH)
+        os.remove(destino_zip)
+        messagebox.showinfo("Instalación", "Archivos generales instalados correctamente.")
+    else:
+        messagebox.showerror("Error", "No se pudieron instalar los archivos generales.")
+
+# Instalación y actualización de mods
 
 def obtener_lista_mods():
-    """ Descarga la lista de mods desde GitHub """
     try:
-        response = requests.get(MODS_LIST_URL)
+        response = requests.get(MODS_JSON_URL)
         if response.status_code == 200:
             return json.loads(response.text)["mods"]
-        else:
-            print("Error al obtener la lista de mods.")
-            return []
     except Exception as e:
-        print(f"Error al descargar la lista de mods: {e}")
-        return []
-
-def limpiar_mods_antiguos(lista_mods):
-    """ Elimina versiones antiguas y mods que no están en GitHub """
-    if not os.path.exists(MODS_PATH):
-        os.makedirs(MODS_PATH)
-
-    mods_actuales = os.listdir(MODS_PATH)
-    
-    # Borrar mods no existentes en GitHub
-    for mod in mods_actuales:
-        if mod not in lista_mods:
-            os.remove(os.path.join(MODS_PATH, mod))
-            print(f"Eliminado mod extra: {mod}")
-
-    # Borrar versiones antiguas
-    for mod_nuevo in lista_mods:
-        base_name = mod_nuevo.rsplit("-", 1)[0]  # Ejemplo: "neko-mod"
-        for mod_viejo in mods_actuales:
-            if mod_viejo.startswith(base_name) and mod_viejo != mod_nuevo:
-                os.remove(os.path.join(MODS_PATH, mod_viejo))
-                print(f"Eliminado mod antiguo: {mod_viejo}")
-
-def instalar_mods(extracted_mods_path, lista_mods):
-    """ Instala solo los mods que están en la lista de GitHub """
-    for mod in lista_mods:
-        shutil.copy(os.path.join(extracted_mods_path, mod), MODS_PATH)
-    print("Mods instalados correctamente.")
-
-def limpiar():
-    """ Limpia archivos temporales """
-    if os.path.exists("mods.zip"):
-        os.remove("mods.zip")
-    if os.path.exists(TEMP_PATH):
-        shutil.rmtree(TEMP_PATH)
+        print(f"Error al obtener la lista de mods: {e}")
+    return []
 
 def actualizar_mods():
-    """ Función principal para actualizar los mods """
-    if descargar_mods():
-        mods_path = extraer_mods()
-        if mods_path:
-            lista_mods = obtener_lista_mods()
-            if lista_mods:
-                limpiar_mods_antiguos(lista_mods)
-                instalar_mods(mods_path, lista_mods)
-    limpiar()
-    messagebox.showinfo("Actualización", "Mods actualizados correctamente.")
-
-def actualizar_script():
-    """ Descarga y ejecuta el script más reciente desde GitHub """
-    try:
-        response = requests.get(SCRIPT_URL)
-        if response.status_code == 200:
-            with open("instalar_mods.py", "w") as file:
-                file.write(response.text)
-            os.system("python instalar_mods.py")
+    lista_mods = obtener_lista_mods()
+    if not lista_mods:
+        messagebox.showerror("Error", "No se pudo obtener la lista de mods.")
+        return
+    
+    destino_zip = "mods.zip"
+    if descargar_archivo(MEGA_ZIP_MODS, destino_zip):
+        extraer_zip(destino_zip, TEMP_PATH)
+        extracted_mods_path = os.path.join(TEMP_PATH, "mods")
+        if os.path.exists(extracted_mods_path):
+            if not os.path.exists(MODS_PATH):
+                os.makedirs(MODS_PATH)
+            
+            for mod in os.listdir(MODS_PATH):
+                if mod not in lista_mods:
+                    os.remove(os.path.join(MODS_PATH, mod))
+                    print(f"Eliminado mod obsoleto: {mod}")
+            
+            for mod in lista_mods:
+                shutil.copy(os.path.join(extracted_mods_path, mod), MODS_PATH)
+            
+            shutil.rmtree(TEMP_PATH)
+            os.remove(destino_zip)
+            messagebox.showinfo("Actualización", "Mods actualizados correctamente.")
         else:
-            messagebox.showerror("Error", "No se pudo actualizar el script.")
-    except Exception as e:
-        messagebox.showerror("Error", f"Error al actualizar el script: {e}")
+            messagebox.showerror("Error", "No se encontró la carpeta de mods en el ZIP descargado.")
+    else:
+        messagebox.showerror("Error", "No se pudieron descargar los mods.")
 
 # Interfaz gráfica con Tkinter
 root = tk.Tk()
-root.title("Actualizador de Mods")
+root.title("Minecraft Mod Installer")
 
-tk.Label(root, text="Minecraft Mod Updater", font=("Arial", 14)).pack(pady=10)
-tk.Button(root, text="Actualizar Mods", command=actualizar_mods, font=("Arial", 12)).pack(pady=5)
-tk.Button(root, text="Actualizar Programa", command=actualizar_script, font=("Arial", 12)).pack(pady=5)
-tk.Button(root, text="Salir", command=root.quit, font=("Arial", 12)).pack(pady=10)
+frame = tk.Frame(root, padx=20, pady=20)
+frame.pack()
+
+tk.Label(frame, text="Minecraft Mod Installer", font=("Arial", 14)).pack(pady=10)
+tk.Button(frame, text="Instalar Archivos Generales", command=instalar_archivos_generales, font=("Arial", 12)).pack(pady=5)
+tk.Button(frame, text="Actualizar Mods", command=actualizar_mods, font=("Arial", 12)).pack(pady=5)
+tk.Button(frame, text="Salir", command=root.quit, font=("Arial", 12)).pack(pady=10)
 
 root.mainloop()
