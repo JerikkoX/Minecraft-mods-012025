@@ -8,7 +8,7 @@ from tkinter import messagebox
 
 # URLs de descarga desde MEGA
 MEGA_ZIP_GENERAL = "https://mega.nz/file/48dxgRAI#YmXBSS1IbG9qYednxHypoWfQkDmJMjAxZvb13Y1Tjfg"
-MEGA_ZIP_MODS = "https://mega.nz/fm/aquilinkenlace"
+MEGA_ZIP_MODS = "https://mega.nz/file/Jxs1yDSR#-j59s-53Cofh7Kj8qLgrSCz547pEwHUcb3gPVaDsRHU"
 MODS_JSON_URL = "https://raw.githubusercontent.com/JerikkoX/Minecraft-mods-012025/main/mods_list.json"
 
 # Rutas de instalación
